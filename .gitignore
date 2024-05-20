@@ -161,3 +161,5 @@ cython_debug/
 
 # extra
 _run.sh
+# dicts
+dicts.whisper.ja.csv
