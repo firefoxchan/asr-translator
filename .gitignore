@@ -162,4 +162,4 @@ cython_debug/
 # extra
 _run.sh
 # dicts
-dicts/*.private.csv
+dicts/*.private.tsv

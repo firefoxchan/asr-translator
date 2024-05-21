@@ -43,6 +43,8 @@ class SubEvent:
         self.text = re.sub(self.CLEAN_JA_RE, r"\1", self.text)
         for old, new in dicts.whisper_ja_replace:
             self.text = self.text.replace(old, new)
+        for old, new in dicts.whisper_ja_regex:
+            self.text = re.sub(old, new, self.text)
         return self
 
     def clean_zh(self, transcript):
@@ -52,6 +54,10 @@ class SubEvent:
             if src != "" and transcript.find(src) < 0:
                 continue
             self.text = self.text.replace(old, new)
+        for src, old, new in dicts.translate_zh_regex:
+            if src is not None and re.match(src, transcript):
+                continue
+            self.text = re.sub(old, new, self.text)
         return self
 
     @staticmethod
