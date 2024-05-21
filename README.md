@@ -113,7 +113,7 @@ TODO
 
 ### 调整翻译结果
 
-编辑文件 `dicts/translate.zh.re.tsv`, 可以对 whisper 转录出来的文本做正则替换  
+编辑文件 `dicts/translate.zh.re.tsv`, 可以对翻译出来的文本做正则替换  
 每行格式为 `翻译前正则A	翻译后正则B	替换表达式C`  
 替换方式为:
 - 如果翻译前正则A为空, `re.sub(翻译后正则B, 替换表达式C, 翻译后文本)`  
