@@ -58,7 +58,9 @@ python app.py \
 
 ## 字典
 
-各个字典都有一个以 `private.csv` 结尾的文件版本, 功能跟主文件一样, 只是不会被git跟踪  
+各个字典都有一个以 `private.csv` 结尾的文件版本
+比如 `whisper.ja.csv` 对应的就是 `whisper.ja.private.csv`  
+功能跟主文件一样, 只是不会被git跟踪  
 
 ### 调整转录结果
 
