@@ -12,6 +12,7 @@ from pathvalidate import sanitize_filename
 
 import py7zr
 
+import dicts
 import llm
 import subs
 from translate import SakuraLLMTranslator
@@ -101,7 +102,11 @@ class App:
 
     def _translate(self, ss):
         yield Progress(0, len(ss), f'初始化SakuraLLM', None)
-        translator = SakuraLLMTranslator(self.sakura_config, self.sakura_generation_config, [])
+        translator = SakuraLLMTranslator(
+            self.sakura_config,
+            self.sakura_generation_config,
+            show_progress=self.translate_show_progress,
+        )
         i = 0
         for sub in ss:
             yield Progress(i, len(ss), f'翻译 ({i+1}/{len(ss)})', None)
@@ -126,6 +131,7 @@ class App:
     def transcribe(self, files, formats):
         if not files or len(files) == 0:
             return [], ''
+        dicts.reload()
         output_dir = self.current_output_dir()
         output_transcribe_dir = os.path.join(output_dir, 'transcribe')
         os.makedirs(output_transcribe_dir, 0o755, exist_ok=True)
@@ -152,6 +158,7 @@ class App:
     def translate(self, files, formats):
         if not files or len(files) == 0:
             return [], ''
+        dicts.reload()
         output_dir = self.current_output_dir()
         output_translate_dir = os.path.join(output_dir, 'translate')
         os.makedirs(output_translate_dir, 0o755, exist_ok=True)
@@ -185,6 +192,7 @@ class App:
     def transcribe_then_translate(self, files, formats):
         if not files or len(files) == 0:
             return [], [], ''
+        dicts.reload()
         output_dir = self.current_output_dir()
         output_transcribe_dir = os.path.join(output_dir, 'transcribe')
         output_translate_dir = os.path.join(output_dir, 'translate')
@@ -284,7 +292,7 @@ class App:
                 with gr.TabItem("翻译(sakura)"):
                     with gr.Row():
                         input_files = gr.Files(type="filepath", label="上传文本文件",
-                                               file_types=['.vtt', '.txt'], interactive=True)
+                                               file_types=['.lrc', '.srt', '.vtt', '.txt'], interactive=True)
                         output_formats = gr.Dropdown(label="输出文件格式",
                                                      choices=['lrc', 'vtt', 'txt'],
                                                      value=['lrc'],

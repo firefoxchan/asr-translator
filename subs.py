@@ -45,9 +45,13 @@ class SubEvent:
             self.text = self.text.replace(old, new)
         return self
 
-    def clean_zh(self):
+    def clean_zh(self, transcript):
         self.clean()
         self.text = re.sub(self.CLEAN_ZH_RE, r"\1", self.text)
+        for src, old, new in dicts.translate_zh_replace:
+            if src != "" and transcript.find(src) < 0:
+                continue
+            self.text = self.text.replace(old, new)
         return self
 
     @staticmethod

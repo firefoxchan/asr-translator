@@ -3,6 +3,7 @@ import copy
 import collections
 from pprint import pprint
 
+import dicts
 import subs
 import llm
 
@@ -23,13 +24,12 @@ class SakuraLLMTranslator:
             self,
             cfg: llm.SakuraConfig,
             gc: llm.SakuraGenerationConfig,
-            gpt_dict: list,
             show_progress=False,
             max_source_lines=30,
     ):
         self.model = llm.Sakura(cfg)
         self.generation_config = gc
-        self.gpt_dict = gpt_dict
+        self.gpt_dict = dicts.gpt_dict
         self.history = collections.deque([])
         self.history_length = 0
         self.show_progress = show_progress
@@ -86,8 +86,9 @@ class SakuraLLMTranslator:
                     if line.text == "":
                         translated.append(line)
                         continue
-                    cpy = copy.copy(line)
+                    cpy: subs.SubEvent = copy.copy(line)
                     cpy.text = contents[i]
+                    cpy.clean_zh(line.text)
                     translated.append(cpy)
                     self.history_append(line.text, cpy.text)
                     i += 1
@@ -97,13 +98,13 @@ class SakuraLLMTranslator:
                 # retry line by line
                 print("回退至逐行翻译模式")
                 for line in current:
-                    cpy = copy.copy(line)
+                    cpy: subs.SubEvent = copy.copy(line)
                     if line.text != "":
                         cpy.text = self._translate(line.text).text
+                        cpy.clean_zh(line.text)
                     translated.append(cpy)
                     self.history_append(line.text, cpy.text)
                     yield Progress(len(translated), len(sub), '', translated, False)
-        translated = [event.clean_zh() for event in translated]
         yield Progress(len(translated), len(sub), '', translated, True)
 
     def _warning_lines_mismatch(self, srcs, trss):
@@ -132,16 +133,7 @@ class SakuraLLMTranslator:
             user = f"{history_user}\n{text}"
             assistant = f"{history_assistant}\n"
         if "0.10" in self.model.cfg.model_version:
-            gpt_dict_text_list = []
-            for gpt in self.gpt_dict:
-                src = gpt['src']
-                dst = gpt['dst']
-                info = gpt['info'] if "info" in gpt.keys() else None
-                if info:
-                    single = f"{src}->{dst} #{info}"
-                else:
-                    single = f"{src}->{dst}"
-                gpt_dict_text_list.append(single)
+            gpt_dict_text_list = list(f"{row[0]}->{row[1]}" for row in self.gpt_dict)
             gpt_dict_raw_text = "\n".join(gpt_dict_text_list)
             prompt = "<|im_start|>system\n" \
                      "你是一个轻小说翻译模型，可以流畅通顺地使用给定的术语表以日本轻小说的风格将日文翻译成简体中文，并联系上下文正确使用人称代词，注意不要混淆使役态和被动态的主语和宾语，不要擅自添加原文中没有的代词，也不要擅自增加或减少换行。<|im_end|>\n" \
