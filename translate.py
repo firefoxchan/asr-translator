@@ -1,4 +1,3 @@
-import os.path
 import copy
 import collections
 from pprint import pprint
@@ -46,21 +45,10 @@ class SakuraLLMTranslator:
             print(f"      to: {trs}")
 
     def translate_file(self, file):
-        ext = os.path.splitext(file)[1].lstrip(".").lower()
-        match ext:
-            case 'txt':
-                sub = subs.SubEvent.load_txt(file)
-            case 'srt':
-                sub = subs.SubEvent.load_pysubs2(file, ext)
-            case 'vtt':
-                sub = subs.SubEvent.load_pysubs2(file, ext)
-            case _:
-                raise ValueError(
-                    f"Unsupported file ext: {ext}"
-                )
+        sub = subs.Sub.load_file(file)
         return self.translate(sub)
 
-    def translate(self, sub: [subs.SubEvent]):
+    def translate(self, sub: subs.Sub):
         sub = [event.clean_ja() for event in sub]
         grouped: [[subs.SubEvent]] = []
         current: [subs.SubEvent] = []

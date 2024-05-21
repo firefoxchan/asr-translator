@@ -1,5 +1,6 @@
 import os
 import re
+import collections
 from typing import TextIO
 
 import pysubs2
@@ -60,18 +61,25 @@ class SubEvent:
             self.text = re.sub(old, new, self.text)
         return self
 
+
+class Sub(collections.UserList):
+    def __init__(self, events: [SubEvent] = None):
+        if events is None:
+            events = []
+        super().__init__(events)
+
     @staticmethod
     def load_file(file):
         ext = os.path.splitext(file)[1].lstrip(".").lower()
         match ext:
             case 'txt':
-                return SubEvent.load_txt(file)
+                return Sub.load_txt(file)
             case 'lrc':
-                return SubEvent.load_lrc(file)
+                return Sub.load_lrc(file)
             case 'srt':
-                return SubEvent.load_pysubs2(file, ext)
+                return Sub.load_pysubs2(file, ext)
             case 'vtt':
-                return SubEvent.load_pysubs2(file, ext)
+                return Sub.load_pysubs2(file, ext)
             case _:
                 raise ValueError(
                     f"Unsupported file ext: {ext}"
@@ -80,23 +88,27 @@ class SubEvent:
     @staticmethod
     def load_pysubs2(file, format_: str = None):
         ssa = pysubs2.load(file, format_=format_)
-        return [SubEvent(start=event.start / 1000.0, end=event.end / 1000.0, text=event.text) for event in ssa]
+        return Sub([SubEvent(start=event.start / 1000.0, end=event.end / 1000.0, text=event.text) for event in ssa])
 
     @staticmethod
     def load_lrc(file):
-        sub = []
+        sub = Sub()
         with open(file, mode='r', encoding='utf8') as f:
             lines = f.readlines()
+            half_events = []
             for i, segment in enumerate(lines):
                 start, text = segment.split("]", 1)
                 text = text.strip()
                 if text == "":
                     continue
                 start = parse_lrc_timestamp(start.lstrip("["))
+                half_events.append((start, text))
+            half_events.sort(key=lambda x: x[0])
+            for i, segment in enumerate(half_events):
+                start, text = segment
                 end = start + 10  # fallback
-                if i+1 < len(lines):
-                    end, _ = lines[i+1].split("]", 1)
-                    end = parse_lrc_timestamp(end.lstrip("["))
+                if i+1 < len(half_events):
+                    end = half_events[i+1][0]
                 words = []
                 # TODO: parse A2 extension
                 sub.append(SubEvent(start=start, end=end, text=text, words=words))
@@ -106,11 +118,11 @@ class SubEvent:
     def load_txt(file):
         with open(file, mode='r', encoding='utf8') as f:
             lines = f.readlines()
-            return [SubEvent(text=line) for line in lines if len(line.strip()) > 0]
+            return Sub([SubEvent(text=line) for line in lines if len(line.strip()) > 0])
 
     @staticmethod
     def from_transformer_whisper(whisper_result):
-        sub = []
+        sub = Sub()
         for idx, chunk in enumerate(whisper_result["chunks"]):
             begin, end = chunk["timestamp"]
             if begin is None:
@@ -128,7 +140,7 @@ class SubEvent:
 
     @staticmethod
     def from_fast_whisper(whisper_result):
-        sub = []
+        sub = Sub([])
         for idx, seg in enumerate(whisper_result["segments"]):
             begin, end = seg["start"], seg["end"]
             if begin is None:
@@ -148,9 +160,9 @@ class SubEvent:
         return merge_sub(sub)
 
 
-def merge_sub(sub: [SubEvent]) -> [SubEvent]:
+def merge_sub(sub: Sub) -> Sub:
     # try merge
-    merged = []
+    merged = Sub([])
     i = 0
     while i < len(sub):
         if sub[i].text.strip() == '':
@@ -170,7 +182,7 @@ def merge_sub(sub: [SubEvent]) -> [SubEvent]:
     return merged
 
 
-def write_all(sub: [SubEvent], base_dir, filename, formats) -> list[str]:
+def write_all(sub: Sub, base_dir, filename, formats) -> list[str]:
     writers = {
         'lrc': write_lrc,
         'srt': write_srt,
@@ -191,7 +203,7 @@ def write_all(sub: [SubEvent], base_dir, filename, formats) -> list[str]:
     return files
 
 
-def write_vtt(sub: [SubEvent], f: TextIO):
+def write_vtt(sub: Sub, f: TextIO):
     lines = ["WebVTT\n\n"]
     for idx, event in enumerate(sub):
         lines.append(f"{idx + 1}\n")
@@ -200,7 +212,7 @@ def write_vtt(sub: [SubEvent], f: TextIO):
     f.writelines(lines)
 
 
-def write_srt(sub: [SubEvent], f: TextIO):
+def write_srt(sub: Sub, f: TextIO):
     lines = []
     for idx, event in enumerate(sub):
         lines.append(f"{idx + 1}\n")
@@ -264,7 +276,7 @@ def parse_lrc_timestamp(s: str):
     return minutes*60 + seconds*1 + milliseconds*0.001
 
 
-def write_lrc(sub: [SubEvent], f: TextIO):
+def write_lrc(sub: Sub, f: TextIO):
     lines = []
     for idx, event in enumerate(sub):
         start_s = format_lrc_timestamp(event.start)
@@ -280,7 +292,7 @@ def write_lrc(sub: [SubEvent], f: TextIO):
     f.writelines(lines)
 
 
-def write_txt(sub: [SubEvent], f: TextIO):
+def write_txt(sub: Sub, f: TextIO):
     lines = []
     for event in sub:
         lines.append(f"{event.text}\n")

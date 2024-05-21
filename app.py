@@ -90,7 +90,7 @@ class App:
                     json.dump(result, f, ensure_ascii=False)
             except Exception as e:
                 print(e)
-            yield Progress(i+1, len(files), f'转录 ({i+1}/{len(files)})', subs.SubEvent.from_fast_whisper(result))
+            yield Progress(i+1, len(files), f'转录 ({i+1}/{len(files)})', subs.Sub.from_fast_whisper(result))
             gc.collect()
             torch.cuda.empty_cache()
             i += 1
@@ -143,7 +143,7 @@ class App:
                 continue
             file = files[i]
             curr_transcribes = subs.write_all(
-                list(event.clean_ja() for event in progress.data), output_transcribe_dir, os.path.splitext(os.path.basename(file.name))[0], formats,
+                subs.Sub(event.clean_ja() for event in progress.data), output_transcribe_dir, os.path.splitext(os.path.basename(file.name))[0], formats,
             )
             transcribes.extend(curr_transcribes)
             i += 1
@@ -164,7 +164,7 @@ class App:
         os.makedirs(output_translate_dir, 0o755, exist_ok=True)
         translates = []
         i = 0
-        for progress in self._translate(list(subs.SubEvent.load_file(file) for file in files)):
+        for progress in self._translate(list(subs.Sub.load_file(file) for file in files)):
             if progress.data is None:
                 yield translates, progress.desc
                 continue
@@ -208,7 +208,7 @@ class App:
                 continue
             ss.append(progress.data)
             curr_transcribes = subs.write_all(
-                list(event.clean_ja() for event in progress.data), output_transcribe_dir, os.path.splitext(os.path.basename(files[i].name))[0], formats,
+                subs.Sub(event.clean_ja() for event in progress.data), output_transcribe_dir, os.path.splitext(os.path.basename(files[i].name))[0], formats,
             )
             transcribes.extend(curr_transcribes)
             i += 1
