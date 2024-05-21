@@ -74,7 +74,9 @@ class App:
 
     def _transcribe_whisperx(self, files):
         yield Progress(0, len(files), f'初始化Whisper', None)
-        transcribe_model = whisperx.load_model(self.transcribe_model, self.transcribe_device)
+        transcribe_model = whisperx.load_model(
+            self.transcribe_model, self.transcribe_device,
+            vad_options={'vad_onset': 0.4, 'vad_offset': 0.3})
         align_model, align_metadata = whisperx.load_align_model(language_code="ja", device=self.transcribe_device)
         i = 0
         for file in files:

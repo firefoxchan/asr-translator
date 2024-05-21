@@ -99,13 +99,13 @@ class Sub(collections.UserList):
             for i, segment in enumerate(lines):
                 start, text = segment.split("]", 1)
                 text = text.strip()
-                if text == "":
-                    continue
                 start = parse_lrc_timestamp(start.lstrip("["))
                 half_events.append((start, text))
             half_events.sort(key=lambda x: x[0])
             for i, segment in enumerate(half_events):
                 start, text = segment
+                if text == "":
+                    continue
                 end = start + 10  # fallback
                 if i+1 < len(half_events):
                     end = half_events[i+1][0]
