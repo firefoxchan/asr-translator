@@ -26,6 +26,7 @@ def parse_arguments():
     parser.add_argument('--username', type=str, default=None)
     parser.add_argument('--password', type=str, default=None)
     parser.add_argument('--upload_dir', type=str, default=None)
+    parser.add_argument('--whisper_model_name_or_path', type=str, default="large-v2")
     parser.add_argument('--model_name_or_path', type=str, default=None)
     parser.add_argument('--use_gpu', action='store_true', default=False)
     parser.add_argument('--text_length', type=int, default=1024)
@@ -51,9 +52,8 @@ class App:
         self.output_dir = os.path.join(upload_dir, 'output')
         self.debug_dir = os.path.join(upload_dir, 'debug')
         self.concurrent_id = '__global__'
-        self.transcribe_device = "cuda"
-        self.transcribe_model = "large-v2"
-        self.transcribe_compute_type = "float16"
+        self.transcribe_device = "cuda" if args.use_gpu else "cpu"
+        self.transcribe_model = args.whisper_model_name_or_path
         self.sakura_config = llm.SakuraConfig(
             model_name_or_path=args.model_name_or_path,
             use_gpu=args.use_gpu,
@@ -74,7 +74,7 @@ class App:
 
     def _transcribe_whisperx(self, files):
         yield Progress(0, len(files), f'初始化Whisper', None)
-        transcribe_model = whisperx.load_model(self.transcribe_model, self.transcribe_device, compute_type=self.transcribe_compute_type)
+        transcribe_model = whisperx.load_model(self.transcribe_model, self.transcribe_device)
         align_model, align_metadata = whisperx.load_align_model(language_code="ja", device=self.transcribe_device)
         i = 0
         for file in files:
