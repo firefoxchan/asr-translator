@@ -33,8 +33,15 @@ class SakuraLLMTranslator:
         self.history_length = 0
         self.show_progress = show_progress
         self.max_source_lines = max_source_lines
+        self.cache = {}
 
     def history_append(self, src: str, trs: str):
+        if len(src) <= 5:
+            return
+        if len(self.history) > 0:
+            last_src, last_trs = self.history[-1]
+            if last_src == src or last_trs == trs:
+                return
         self.history.append((src, trs))
         self.history_length += len(src) + len(trs) + 2
         while self.history_length > self.model.cfg.text_length:
@@ -79,6 +86,7 @@ class SakuraLLMTranslator:
                     cpy.clean_zh(line.text)
                     translated.append(cpy)
                     self.history_append(line.text, cpy.text)
+                    self.cache[line.text] = cpy.text
                     i += 1
                 yield Progress(len(translated), len(sub), '', translated, False)
             else:
@@ -88,10 +96,15 @@ class SakuraLLMTranslator:
                 for line in current:
                     cpy: subs.SubEvent = copy.copy(line)
                     if line.text != "":
-                        cpy.text = self._translate(line.text).text
-                        cpy.clean_zh(line.text)
+                        cached = self.cache.get(line.text)
+                        if cached is not None:
+                            cpy.text = cached
+                        else:
+                            cpy.text = self._translate(line.text).text.replace("\n", " ")
+                            cpy.clean_zh(line.text)
                     translated.append(cpy)
                     self.history_append(line.text, cpy.text)
+                    self.cache[line.text] = cpy.text
                     yield Progress(len(translated), len(sub), '', translated, False)
         yield Progress(len(translated), len(sub), '', translated, True)
 
